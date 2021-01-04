@@ -18,12 +18,15 @@
 #sys.path.insert(0, os.path.abspath('.'))
 
 import os
+import sys
+
+sys.path.insert(0, os.path.abspath('..'))
 
 DIR = os.path.dirname('__file__')
-with open (os.path.join(DIR, '../setup.py'), 'r') as f:
+with open (os.path.join(DIR, '../pyproject.toml'), 'r') as f:
     for line in f:
-        if 'version=' in line:
-            setup_version = line.split('\'')[1]
+        if 'version =' in line:
+            setup_version = line.split('\"')[1]
             break
 
 # -- General configuration ------------------------------------------------

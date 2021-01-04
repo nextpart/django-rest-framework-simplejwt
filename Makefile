@@ -6,6 +6,7 @@ clean-build:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr *.egg-info
+	rm -rf $(poetry env info -p)
 
 .PHONY: clean-pyc
 clean-pyc:
@@ -15,25 +16,19 @@ clean-pyc:
 
 .PHONY: lint
 lint:
-	tox -e lint
-
-.PHONY: lint-roll
-lint-roll:
-	isort rest_framework_simplejwt tests
-	$(MAKE) lint
+	poetry run tox -e lint
 
 .PHONY: tests
 test:
-	pytest tests
+	poetry run pytest tests
 
 .PHONY: test-all
 test-all:
-	tox
+	poetry run tox
 
 .PHONY: build-docs
 build-docs:
-	sphinx-apidoc -o docs/ . \
-		setup.py \
+	poetry run sphinx-apidoc -o docs/ . \
 		*confest* \
 		tests/* \
 		rest_framework_simplejwt/token_blacklist/* \
@@ -64,10 +59,10 @@ pushversion:
 
 .PHONY: publish
 publish:
-	python setup.py sdist bdist_wheel
-	twine upload dist/*
+	poetry build
+	poetry publish
 
 .PHONY: dist
 dist: clean
-	python setup.py sdist bdist_wheel
-	ls -l dist
+	rm -rf (poetry env info -p)
+

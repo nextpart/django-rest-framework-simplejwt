@@ -1,0 +1,39 @@
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "djangorestframework_simplejwt"
+packages = [
+    { include = "rest_framework_simplejwt"}
+]
+version = "4.6.0"
+description = "A minimal JSON Web Token authentication plugin for Django REST Framework"
+license = "MIT"
+classifiers = ["Development Status :: 5 - Production/Stable", "Environment :: Web Environment", "Framework :: Django", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.7", "Programming Language :: Python :: 3.8", "Programming Language :: Python :: 3.9", "Topic :: Internet :: WWW/HTTP"]
+homepage = "https://github.com/SimpleJWT/django-rest-framework-simplejwt"
+authors = ["David Sanders <davesque@gmail.com>", "Christian <sircanist@gmail.com>"]
+readme = "README.rst"
+
+[tool.poetry.dependencies]
+python = "^3.8 || ^3.9"
+bumpversion = {version = "<1,>=0.5.3", optional = true}
+cryptography = {optional = true, version = "*"}
+django = "*"
+djangorestframework = "*"
+
+[tool.poetry.dev-dependencies]
+flake8 = "*"
+cryptography = "*"
+isort = "*"
+pep8 = "*"
+pyjwt = "*"
+pytest ="*"
+pytest-cov = "*"
+pytest-django = "*"
+pytest-watch = "*"
+pytest-xdist = "*"
+python-jose = "*"
+sphinx = {version = "<2,>=1.6.5", optional = false}
+sphinx-rtd-theme = "*"
+tox = "*"

@@ -8,7 +8,10 @@ from .exceptions import TokenBackendError, TokenError
 from .settings import api_settings
 from .token_blacklist.models import BlacklistedToken, OutstandingToken
 from .utils import (
-    aware_utcnow, datetime_from_epoch, datetime_to_epoch, format_lazy,
+    aware_utcnow,
+    datetime_from_epoch,
+    datetime_to_epoch,
+    format_lazy,
 )
 
 
@@ -17,6 +20,7 @@ class Token:
     A class which validates and wraps an existing JWT or can be used to build a
     new JWT.
     """
+
     token_type = None
     lifetime = None
 
@@ -27,7 +31,7 @@ class Token:
         to use.
         """
         if self.token_type is None or self.lifetime is None:
-            raise TokenError(_('Cannot create token with no type or lifetime'))
+            raise TokenError(_("Cannot create token with no type or lifetime"))
 
         self.token = token
         self.current_time = aware_utcnow()
@@ -39,9 +43,11 @@ class Token:
 
             # Decode token
             try:
-                self.payload = token_backend.decode(token, verify=verify)
+                self.payload = token_backend.decode(
+                    token, options={"verify_signature": verify}
+                )
             except TokenBackendError:
-                raise TokenError(_('Token is invalid or expired'))
+                raise TokenError(_("Token is invalid or expired"))
 
             if verify:
                 self.verify()
@@ -95,7 +101,7 @@ class Token:
 
         # Ensure token id is present
         if api_settings.JTI_CLAIM not in self.payload:
-            raise TokenError(_('Token has no id'))
+            raise TokenError(_("Token has no id"))
 
         self.verify_token_type()
 
@@ -106,10 +112,10 @@ class Token:
         try:
             token_type = self.payload[api_settings.TOKEN_TYPE_CLAIM]
         except KeyError:
-            raise TokenError(_('Token has no type'))
+            raise TokenError(_("Token has no type"))
 
         if self.token_type != token_type:
-            raise TokenError(_('Token has wrong type'))
+            raise TokenError(_("Token has wrong type"))
 
     def set_jti(self):
         """
@@ -122,7 +128,7 @@ class Token:
         """
         self.payload[api_settings.JTI_CLAIM] = uuid4().hex
 
-    def set_exp(self, claim='exp', from_time=None, lifetime=None):
+    def set_exp(self, claim="exp", from_time=None, lifetime=None):
         """
         Updates the expiration time of a token.
         """
@@ -134,7 +140,7 @@ class Token:
 
         self.payload[claim] = datetime_to_epoch(from_time + lifetime)
 
-    def check_exp(self, claim='exp', current_time=None):
+    def check_exp(self, claim="exp", current_time=None):
         """
         Checks whether a timestamp value in the given claim has passed (since
         the given datetime value in `current_time`).  Raises a TokenError with
@@ -175,7 +181,9 @@ class BlacklistMixin:
     themselves into an outstanding token list and also check for their
     membership in a token blacklist.
     """
-    if 'rest_framework_simplejwt.token_blacklist' in settings.INSTALLED_APPS:
+
+    if "rest_framework_simplejwt.token_blacklist" in settings.INSTALLED_APPS:
+
         def verify(self, *args, **kwargs):
             self.check_blacklist()
 
@@ -189,7 +197,7 @@ class BlacklistMixin:
             jti = self.payload[api_settings.JTI_CLAIM]
 
             if BlacklistedToken.objects.filter(token__jti=jti).exists():
-                raise TokenError(_('Token is blacklisted'))
+                raise TokenError(_("Token is blacklisted"))
 
         def blacklist(self):
             """
@@ -197,14 +205,14 @@ class BlacklistMixin:
             adds it to the blacklist.
             """
             jti = self.payload[api_settings.JTI_CLAIM]
-            exp = self.payload['exp']
+            exp = self.payload["exp"]
 
             # Ensure outstanding token exists with given jti
             token, _ = OutstandingToken.objects.get_or_create(
                 jti=jti,
                 defaults={
-                    'token': str(self),
-                    'expires_at': datetime_from_epoch(exp),
+                    "token": str(self),
+                    "expires_at": datetime_from_epoch(exp),
                 },
             )
 
@@ -218,7 +226,7 @@ class BlacklistMixin:
             token = super().for_user(user)
 
             jti = token[api_settings.JTI_CLAIM]
-            exp = token['exp']
+            exp = token["exp"]
 
             OutstandingToken.objects.create(
                 user=user,
@@ -232,7 +240,7 @@ class BlacklistMixin:
 
 
 class SlidingToken(BlacklistMixin, Token):
-    token_type = 'sliding'
+    token_type = "sliding"
     lifetime = api_settings.SLIDING_TOKEN_LIFETIME
 
     def __init__(self, *args, **kwargs):
@@ -248,18 +256,17 @@ class SlidingToken(BlacklistMixin, Token):
 
 
 class RefreshToken(BlacklistMixin, Token):
-    token_type = 'refresh'
+    token_type = "refresh"
     lifetime = api_settings.REFRESH_TOKEN_LIFETIME
     no_copy_claims = (
         api_settings.TOKEN_TYPE_CLAIM,
-        'exp',
-
+        "exp",
         # Both of these claims are included even though they may be the same.
         # It seems possible that a third party token might have a custom or
         # namespaced JTI claim as well as a default "jti" claim.  In that case,
         # we wouldn't want to copy either one.
         api_settings.JTI_CLAIM,
-        'jti',
+        "jti",
     )
 
     @property
@@ -287,12 +294,12 @@ class RefreshToken(BlacklistMixin, Token):
 
 
 class AccessToken(Token):
-    token_type = 'access'
+    token_type = "access"
     lifetime = api_settings.ACCESS_TOKEN_LIFETIME
 
 
 class UntypedToken(Token):
-    token_type = 'untyped'
+    token_type = "untyped"
     lifetime = timedelta(seconds=0)
 
     def verify_token_type(self):
