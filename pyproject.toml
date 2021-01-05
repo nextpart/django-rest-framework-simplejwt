@@ -7,7 +7,7 @@ name = "djangorestframework_simplejwt"
 packages = [
     { include = "rest_framework_simplejwt"}
 ]
-version = "4.6.0"
+version = "4.6.1"
 description = "A minimal JSON Web Token authentication plugin for Django REST Framework"
 license = "MIT"
 classifiers = ["Development Status :: 5 - Production/Stable", "Environment :: Web Environment", "Framework :: Django", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.7", "Programming Language :: Python :: 3.8", "Programming Language :: Python :: 3.9", "Topic :: Internet :: WWW/HTTP"]
