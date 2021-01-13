@@ -1,0 +1,203 @@
+# AZURE DEVOPS PIPELINE CONFIGURATION FILE
+# ---------------------------------------------------------
+# Copyright (C) 2020 Nextpart Security Intelligence GmbH
+# All rights reserved. - Proprietary and confidential
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+variables:
+  - group: devops
+  - name: name
+    value: 'djangorestframework-simplejwt-np'
+  - name: artifactFeed
+    value: 'NEXTPART-PY-'
+
+trigger:
+  branches:
+    include: [ '*' ]
+
+pool:
+  Docker
+  # vmImage: ubuntu-latest # uncomment for cloud-hosted building
+
+# -------------------------------------------------------------
+# Linting, testing, packaging, validating of python packages
+# with a subsequent upload to the azure devops artifact store.
+jobs:
+
+  - job: Build
+    # Strategy pattern to run all steps for multiple versions of Python
+    strategy:
+      matrix:
+        # python36: { python.version: 3.6, feed.id: 36 }
+        # python37: { python.version: 3.7, feed.id: 37 }
+        python38: { python.version: 3.8, feed.id: 38 }
+        python39:
+          python.version: 3.9 # needed for OS identification
+          feed.id: 39 # needed for feed and tox identification
+
+    steps:  # Doing this for every strategy
+
+      - task: InstallSSHKey@0
+        inputs:
+          knownHostsEntry: $(known_host)
+          sshPublicKey: $(ssh_public_key)
+          sshPassphrase: $(ssh_passphrase)
+          sshKeySecureFile: id_rsa
+        condition: or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - checkout: self
+        submodules: recursive
+        persistCredentials: true
+        condition: or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - task: UsePythonVersion@0
+        displayName: 'Use Python $(python.version)'
+        inputs:
+          versionSpec: $(python.version)
+        name: pyTools
+        condition: or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - bash: |
+          $(pyTools.pythonLocation)/bin/python -m pip install -U pip poetry twine
+        displayName: 'Install software setup dependencies'
+        condition: or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - bash: |
+          echo "##vso[build.updatebuildnumber]$(poetry version | sed 's/$(name) //g')"
+          sed -i "s/NEXTPART-PY-38/NEXTPART-PY-$(feed.id)/g" pyproject.toml
+          poetry config repositories.NEXTPART-PY-$(feed.id) \
+          https://pkgs.dev.azure.com/NEXTPART/_packaging/NEXTPART-PY-$(feed.id)/pypi/simple/
+          poetry config http-basic.NEXTPART-PY-$(feed.id) $(PAT) DOESNTMATTER
+        displayName: 'Configure Artifact feed for poetry'
+        condition: or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - bash: |
+          poetry install -nvV  # --no-root
+          poetry run tox -e lint
+        displayName: 'Linting with TOX'
+        condition: or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - bash: |
+          sudo apt-get install pandoc -y
+          poetry run tox -e docs
+        displayName: 'Documentation validation with TOX'
+        condition: eq(variables['python.version'], '3.8')
+
+      - task: PublishPipelineArtifact@1
+        displayName: 'Publish documentation html result as artifact'
+        condition: and(
+            succeeded(),
+            or(
+              eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+              eq(variables['python.version'], '3.8')
+            )
+          )
+        inputs:
+          targetPath: docs/_build/html
+          artifactName: documentation
+
+      - bash: |
+          poetry run tox -e py$(feed.id)-django31-drf312-tests
+          poetry run tox -e package
+        displayName: 'Test for python version using tox framework'
+        condition: and(
+            succeededOrFailed(),
+            or(
+              eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+              eq(variables['python.version'], '3.8')
+            )
+          )
+
+      - task: PublishTestResults@2
+        condition: and(
+            succeededOrFailed(),
+            or(
+              eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+              eq(variables['python.version'], '3.8')
+            )
+          )
+        inputs:
+          testResultsFiles: '**/test-*.xml'
+          testRunTitle: 'Test results for Package $(name) in python version $(python.version).'
+        displayName: 'Publish test results'
+
+      - task: PublishCodeCoverageResults@1
+        condition: and(
+            succeededOrFailed(),
+            or(
+              eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+              eq(variables['python.version'], '3.8')
+            )
+          )
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+          reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+        displayName: 'Publish test coverage'
+
+      - bash: |
+          poetry build -nvV
+        displayName: 'Build final package for distribution'
+        condition: and(
+            succeeded(),
+            or(
+              eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+              eq(variables['python.version'], '3.8')
+            )
+          )
+
+
+      - task: TwineAuthenticate@0
+        inputs:
+          artifactFeeds: $(artifactFeed)$(feed.id)
+        displayName: 'Authenticate to artifact feed using twine'
+        condition: and(
+            succeeded(),
+            ne(variables['Build.Reason'], 'PullRequest'),
+            or(
+              eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+              eq(variables['python.version'], '3.8')
+            )
+          )
+
+      - bash: |
+          [[ $(poetry version | grep 'alpha' ) ]] && \
+            $(pyTools.pythonLocation)/bin/python -m \
+              twine upload -r $(artifactFeed)$(feed.id) \
+                --config-file $(PYPIRC_PATH) dist/* --verbose
+        displayName: 'Upload only prerelease versions on non master'
+        continueOnError: true
+        condition: and(
+            succeeded(),
+            ne(variables['Build.SourceBranch'], 'refs/heads/master'),
+            eq(variables['python.version'], '3.8')
+          )
+
+      - bash: |
+          $(pyTools.pythonLocation)/bin/python -m \
+            twine upload -r $(artifactFeed)$(feed.id) \
+              --config-file $(PYPIRC_PATH) dist/* --verbose
+        displayName: 'Upload package to azure artifact feed on master'
+        continueOnError: true
+        condition: and(
+            succeeded(),
+            eq(variables['Build.SourceBranch'], 'refs/heads/master')
+          )
