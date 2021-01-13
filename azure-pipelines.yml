@@ -36,26 +36,6 @@ jobs:
           feed.id: 39 # needed for feed and tox identification
 
     steps:  # Doing this for every strategy
-
-      - task: InstallSSHKey@0
-        inputs:
-          knownHostsEntry: $(known_host)
-          sshPublicKey: $(ssh_public_key)
-          sshPassphrase: $(ssh_passphrase)
-          sshKeySecureFile: id_rsa
-        condition: or(
-            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
-            eq(variables['python.version'], '3.8')
-          )
-
-      - checkout: self
-        submodules: recursive
-        persistCredentials: true
-        condition: or(
-            eq(variables['Build.SourceBranch'], 'refs/heads/master'),
-            eq(variables['python.version'], '3.8')
-          )
-
       - task: UsePythonVersion@0
         displayName: 'Use Python $(python.version)'
         inputs:
