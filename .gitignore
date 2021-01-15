@@ -4,6 +4,7 @@
 .*
 
 /site/
+/tests/
 /htmlcov/
 /coverage/
 /build/

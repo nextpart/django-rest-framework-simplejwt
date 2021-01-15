@@ -19,6 +19,8 @@ DEFAULTS = {
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': settings.SECRET_KEY,
     'VERIFYING_KEY': None,
+    'ISSUER_REMOTES': None,
+    'ISSUER_REMOTE_TYPE': None,
     'AUDIENCE': None,
     'ISSUER': None,
 
