@@ -46,8 +46,8 @@ class Token:
                 self.payload = token_backend.decode(
                     token, options={"verify_signature": verify}
                 )
-            except TokenBackendError:
-                raise TokenError(_("Token is invalid or expired"))
+            except TokenBackendError as exc:
+                raise TokenError(_("Token is invalid or expired")) from exc
 
             if verify:
                 self.verify()

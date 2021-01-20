@@ -119,9 +119,9 @@ class TokenBackend:
             # token needed to fetch correct key for validation
             if options.get("verify_signature", True):
                 verifying_key = self._get_remote_key(token)
-        return self._verify(token, options, verifying_key)
+        return self._decode(token, options, verifying_key)
 
-    def _verify(self, token, options, verifying_key):
+    def _decode(self, token, options, verifying_key):
         try:
             if options is None:
                 options = {}
