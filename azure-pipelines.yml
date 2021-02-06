@@ -67,13 +67,12 @@ jobs:
 
       - task: PublishPipelineArtifact@1
         displayName: 'Publish documentation html result as artifact'
-        inputs:
-          targetPath: docs/_build/html
-          artifactName: documentation
         condition: and(
             succeeded(),
             eq(variables['python.version'], '3.8')
-        )
+        inputs:
+          targetPath: docs/_build/html
+          artifactName: documentation
 
       - bash: |
           poetry run tox -e py$(feed.id)-django31-drf312-tests
